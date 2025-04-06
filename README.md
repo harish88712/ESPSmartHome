@@ -11,7 +11,7 @@ This project showcases an IoT solution using the **ESP RainMaker** platform on a
 - ⚠️ Raise an alert if temperature exceeds 30°C.
 - 🔁 Periodically update and report sensor data every 5 seconds.
 - 🔄 Supports OTA firmware updates.
-- 🔁 Wi-Fi and factory reset with a physical button.
+- 🔁 Wi-Fi and factory reset.
 - 📊 Insights enabled for device diagnostics.
 
 ---
