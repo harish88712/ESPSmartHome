@@ -1,3 +1,9 @@
+/**
+ * @file app_main.c
+ * @brief Entry point for ESP RainMaker application. Initializes Wi-Fi, RainMaker node,
+ *        registers devices (Temperature, Humidity, Switch), and starts OTA and Insights.
+ */
+
 #include <string.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -11,13 +17,18 @@
 #include <app_network.h>
 #include <app_insights.h>
 #include "app_priv.h"
+
 #define LED_GPIO GPIO_NUM_10  // LED control GPIO
 static const char *TAG = "app_main";
 
+// Global device handles
 esp_rmaker_device_t *temp_sensor_device;
 esp_rmaker_device_t *humidity_sensor_device;
 esp_rmaker_device_t *switch_device;
 
+/**
+ * @brief Callback function to handle switch (LED) state changes from RainMaker.
+ */
 static esp_err_t app_switch_write_cb(const esp_rmaker_device_t *device,
     const esp_rmaker_param_t *param,
     const esp_rmaker_param_val_t val,
@@ -34,12 +45,15 @@ static esp_err_t app_switch_write_cb(const esp_rmaker_device_t *device,
     return ESP_OK;
 }
 
+/**
+ * @brief Main application entry point.
+ */
 void app_main()
 {
-    /* Initialize driver (including LED GPIO) */
+    // Initialize GPIOs and DHT sensor
     app_driver_init();
 
-    /* Initialize NVS */
+    // Initialize NVS (non-volatile storage)
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -47,10 +61,10 @@ void app_main()
     }
     ESP_ERROR_CHECK(err);
 
-    /* Initialize Wi-Fi */
+    // Initialize Wi-Fi provisioning
     app_network_init();
 
-    /* Initialize RainMaker */
+    // Setup RainMaker configuration and node
     esp_rmaker_config_t rainmaker_cfg = {
         .enable_time_sync = false,
     };
@@ -61,11 +75,11 @@ void app_main()
         abort();
     }
 
-    /* Create Temperature Sensor */
+    // Register Temperature Sensor device
     temp_sensor_device = esp_rmaker_temp_sensor_device_create("Temperature Sensor", NULL, app_get_current_temperature());
     esp_rmaker_node_add_device(node, temp_sensor_device);
 
-    /* Create Humidity Sensor */
+    // Register Humidity Sensor device
     humidity_sensor_device = esp_rmaker_device_create("Humidity Sensor", NULL, NULL);
     esp_rmaker_param_t *humidity_param = esp_rmaker_param_create(
         "Humidity", NULL, esp_rmaker_float(app_get_current_humidity()), PROP_FLAG_READ);
@@ -73,29 +87,27 @@ void app_main()
     esp_rmaker_device_assign_primary_param(humidity_sensor_device, humidity_param);
     esp_rmaker_node_add_device(node, humidity_sensor_device);
 
-    /* Create Switch Device for LED */
+    // Register Switch device (LED control)
     switch_device = esp_rmaker_switch_device_create("LED Switch", NULL, false);
-esp_rmaker_device_add_cb(switch_device, app_switch_write_cb, NULL);
-esp_rmaker_node_add_device(node, switch_device);
+    esp_rmaker_device_add_cb(switch_device, app_switch_write_cb, NULL);
+    esp_rmaker_node_add_device(node, switch_device);
     esp_rmaker_param_t *power_param = esp_rmaker_param_create(
         ESP_RMAKER_DEF_POWER_NAME, NULL, esp_rmaker_bool(false), 
         PROP_FLAG_READ | PROP_FLAG_WRITE);
     esp_rmaker_device_add_param(switch_device, power_param);
     esp_rmaker_device_assign_primary_param(switch_device, power_param);
-    esp_rmaker_device_add_cb(switch_device, app_switch_write_cb, NULL);
-    esp_rmaker_node_add_device(node, switch_device);
     ESP_LOGI(TAG, "LED Switch device created");
 
-    /* Enable OTA */
+    // Enable OTA updates
     esp_rmaker_ota_enable_default();
 
-    /* Enable Insights */
+    // Enable RainMaker insights for debugging/performance metrics
     app_insights_enable();
 
-    /* Start RainMaker */
+    // Start RainMaker cloud services
     esp_rmaker_start();
 
-    /* Start Wi-Fi */
+    // Start Wi-Fi connection (with random proof of possession)
     err = app_network_start(POP_TYPE_RANDOM);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Could not start Wi-Fi. Aborting!!!");
