@@ -29,7 +29,7 @@ This project showcases an IoT solution using the **ESP RainMaker** platform on a
 
 | Purpose            | GPIO Pin   |
 |--------------------|------------|
-| LED                | GPIO 10    |
+| LED/ Light Switch  | GPIO 10    |
 | DHT11 Data         | GPIO 2     |
 
 > You can modify these pin numbers in `app_driver.c` as needed.
